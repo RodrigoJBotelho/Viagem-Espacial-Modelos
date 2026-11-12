@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  testar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compilar
+        run: make
+
+      - name: Rodar os modelos
+        run: make run
+
+      - name: Verificar resultados
+        run: |
+          # os CSVs foram gerados e não estão vazios
+          test -s saida/radiacao_espessura.csv
+          test -s saida/reentrada_perfil.csv
+
+          # erro do Crank-Nicolson contra a solução analítica deve ser < 1 K
+          err=$(cd saida && ../bin/calor1d | grep "perfil final" | sed -E 's/.*CN=([0-9.eE+-]+) K.*/\1/')
+          echo "Erro CN: $err K"
+          awk -v e="$err" 'BEGIN { exit !(e < 1.0) }'
